@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import xmlrpclib
 import os
@@ -13,21 +13,20 @@ def dump_channel(label):
 	subprocess.call(['mkdir', '-p', outdir])
 
 	for pkg in client.channel.software.listLatestPackages(key,label):
-		name = pkg.get('name')
-		version = pkg.get('version')
-		release = pkg.get('release')
-		epoch = pkg.get('epoch')
 		id = pkg.get('id')
-		arch_label = pkg.get('arch_label')
 		filename = client.packages.getDetails(key, pkg.get('id')).get('file')
 		path = client.packages.getDetails(key, pkg.get('id')).get('path')
-		infile = '/var/satellite/' + path
-		outfile = outdir + '/' + filename
-		subprocess.call(['/bin/cp', infile, outdir])
+		url = client.packages.getPackageUrl(key, pkg.get('id'))
+		if local:
+			infile = '/var/satellite/' + path
+			outfile = outdir + '/' + filename
+			subprocess.call(['/bin/cp', infile, outdir])
+		else:
+			location = outdir + '/' + filename
+			subprocess.call(['wget','-O',location,url], stdout=devnull, stderr=devnull)
 
 def check_createrepo():
 	try:
-		devnull = open('/dev/null', 'w')
 		subprocess.check_call(['/usr/bin/createrepo', '--version'], stdout=devnull, stderr=devnull)
 	except:
 		return False
@@ -67,6 +66,9 @@ def parse_config(conf):
 
 if __name__ == "__main__":
 
+	local = False
+	devnull = open('/dev/null', 'w')
+
 	try:
 		conf = open(".repo_rc")
 	except: conf = None
@@ -87,6 +89,12 @@ if __name__ == "__main__":
 
 	SATELLITE_URL = "http://" + SATELLITE_FQDN + "/rpc/api"
 
+	hostname_ps = subprocess.Popen(['hostname', '-f'], stdout=subprocess.PIPE)
+	LOCAL_HOSTNAME, err = hostname_ps.communicate()
+
+	if "localhost" in SATELLITE_FQDN or SATELLITE_FQDN == LOCAL_HOSTNAME.rstrip():
+		local = True
+
 	try:
 		subprocess.check_call(['mkdir', '-p', OUTPUT_DIR])
 	except:
@@ -103,6 +111,12 @@ if __name__ == "__main__":
 		sys.exit(1)
 
 	print "SUCCESS: Dumping channels to %s:\n" % OUTPUT_DIR
+
+	if not local:
+		print "*** WARNING: Fetching files over the network, this may take some time! ***\n"
+	else:
+		print "*** INFO: Fetching files from the local Satellite server ***\n"
+
 	for chan in client.channel.listSoftwareChannels(key):
 		label = chan.get('label')
 		if label == 'rhel-x86_64-server-6':
