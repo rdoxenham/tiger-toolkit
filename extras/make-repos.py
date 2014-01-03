@@ -15,13 +15,13 @@ def dump_channel(label):
 	for pkg in client.channel.software.listLatestPackages(key,label):
 		id = pkg.get('id')
 		filename = client.packages.getDetails(key, pkg.get('id')).get('file')
-		path = client.packages.getDetails(key, pkg.get('id')).get('path')
-		url = client.packages.getPackageUrl(key, pkg.get('id'))
 		if local:
+			path = client.packages.getDetails(key, pkg.get('id')).get('path')
 			infile = '/var/satellite/' + path
 			outfile = outdir + '/' + filename
 			subprocess.call(['/bin/cp', infile, outdir])
 		else:
+			url = client.packages.getPackageUrl(key, pkg.get('id'))
 			location = outdir + '/' + filename
 			subprocess.call(['wget','-O',location,url], stdout=devnull, stderr=devnull)
 
