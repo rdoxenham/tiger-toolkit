@@ -1,0 +1,7 @@
+# Sample file for make-repos.py
+# This file should be placed as ".repo_rc" when used
+
+SATELLITE_FQDN=satellite.example.com
+SATELLITE_USERNAME=rhn-admin
+SATELLITE_PASSWORD=PaS$w0rd
+OUTPUT_DIRECTORY=/tmp/repos
