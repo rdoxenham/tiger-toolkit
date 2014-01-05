@@ -125,7 +125,7 @@ if __name__ == "__main__":
 			dump_channel(label)
 		if label == 'rhel-x86_64-server-6-mrg-messaging-2':
 			dump_channel(label)
-		if label == 'rhel-x86_64-server-ost-4':
+		if label == 'rhel-x86_64-server-6-ost-4':
 			dump_channel(label)
 		if label == 'rhel-x86_64-server-rh-common-6':
 			dump_channel(label)
