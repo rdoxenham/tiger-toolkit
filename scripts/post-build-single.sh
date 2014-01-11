@@ -1,5 +1,5 @@
-#!/bin/bash
-# Basic - All in One Post-Configuration
+#!/usr/bin/env bash
+# Basic - All-in-One/Single Node Post-Configuration
 
 cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-br-ex
 DEVICE=br-ex
