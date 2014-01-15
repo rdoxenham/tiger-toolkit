@@ -121,6 +121,8 @@ if __name__ == "__main__":
 		label = chan.get('label')
 		if label == 'rhel-x86_64-server-6':
 			dump_channel(label)
+		if label == 'rhel-x86_64-server-ha-6':
+			dump_channel(label)
 		if label == 'rhel-x86_64-server-lb-6':
 			dump_channel(label)
 		if label == 'rhel-x86_64-server-6-mrg-messaging-2':
