@@ -216,6 +216,7 @@ def deploy_basic():
 	print "Running Packstack using: %s" % filename
 	if not run_packstack():
 		print "ERROR: Packstack failed, please check the log output!"
+		sys.exit(1)
 	print "SUCCESS: Packstack successfully installed!"
 	sys.exit(0)
 
