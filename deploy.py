@@ -155,6 +155,7 @@ def ask_details(advanced):
 			TUNNEL_IF = ask_question("Enter interface used for tunnel traffic: ", False)
 			OVS_TYPE = TUNNEL_TYPE
 
+		global PASSWD
 		PASSWD = ask_question("Choose a password: ", False)
 
 		if advanced: deployment_type = "Multi-Node w/ High Availability"
@@ -212,6 +213,9 @@ def deploy_basic():
 		if not install_packstack():
 			print "FATAL: Couldn't install Packstack!"
 			sys.exit(1)
+	else:
+		print "INFO: Deployment tool exiting."
+		sys.exit(0)
 
 	print "Running Packstack using: %s" % filename
 	if not run_packstack():
