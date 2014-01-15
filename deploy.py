@@ -18,6 +18,7 @@ NTP_SERVERS = []
 OVS_TYPE = "local"
 TUNNEL_IF = "eth1"
 PASSWD = "redhat"
+TUNNELING = True
 
 def usage():
 	print "OpenStack Tiger Deployment Tool: Version %s" % VERSION
@@ -86,33 +87,50 @@ def gen_packstack():
 
 def ask_details(advanced):
 	happy = False
+	allinone = False
 	while not happy:
-		controller = ask_question("Enter Controller Host IP(s): ", False)
-		controller = controller.strip()
-		values = controller.split(',')
-		if advanced:
+		if not advanced:
+			answer = ask_question("All-in-One Setup? [Y/N]: ", False)
+			if answer.upper() == "Y" or answer.upper() == "YES":
+				global TUNNELING
+				TUNNELING = False
+				allinone = True
+				all_ip = ask_question("\nEnter single all-in-one node IP: ", False)
+				all_ip = all_ip.strip()
+				values = all_ip.split(',')
+				if len(values) > 0:
+					CONTROLLER_HOSTS.append(values[0])
+					COMPUTE_HOSTS.append(values[0])
+					NETWORK_HOSTS.append(values[0])
+			else: print "\nWARNING: Not using All-in-One configuration!\n"
+
+		if not allinone:
+			controller = ask_question("Enter Controller Host IP(s): ", False)
+			controller = controller.strip()
+			values = controller.split(',')
+			if advanced:
+				for value in values:
+					value = value.strip()
+					CONTROLLER_HOSTS.append(value)
+			else:
+				if len(values) > 0: CONTROLLER_HOSTS.append(values[0])
+
+			network = ask_question("Enter Network Host IP(s): ", False)
+			network = network.strip()
+			values = network.split(',')
+			if advanced:
+				for value in values:
+					value = value.strip()
+					NETWORK_HOSTS.append(value)
+			else:
+				if len(values) > 0: NETWORK_HOSTS.append(values[0])
+
+			compute = ask_question("Enter Compute Host IP(s): ", False)
+			compute = compute.strip()
+			values = compute.split(',')
 			for value in values:
 				value = value.strip()
-				CONTROLLER_HOSTS.append(value)
-		else:
-			if len(values) > 0: CONTROLLER_HOSTS.append(values[0])
-
-		network = ask_question("Enter Network Host IP(s): ", False)
-		network = network.strip()
-		values = network.split(',')
-		if advanced:
-			for value in values:
-				value = value.strip()
-				NETWORK_HOSTS.append(value)
-		else:
-			if len(values) > 0: NETWORK_HOSTS.append(values[0])
-
-		compute = ask_question("Enter Compute Host IP(s): ", False)
-		compute = compute.strip()
-		values = compute.split(',')
-		for value in values:
-			value = value.strip()
-			COMPUTE_HOSTS.append(value)
+				COMPUTE_HOSTS.append(value)
 
 		ntp = ask_question("Enter NTP Server IP(s): ", False)
 		ntp = ntp.strip()
@@ -121,7 +139,7 @@ def ask_details(advanced):
 			value = value.strip()
 			NTP_SERVERS.append(value)
 
-		if len(COMPUTE_HOSTS) > 1:
+		if TUNNELING:
 			global TUNNEL_IF, OVS_TYPE
 			TUNNEL_IF = ask_question("Enter interface used for tunnel traffic: ", False)
 			OVS_TYPE = TUNNEL_TYPE
@@ -134,7 +152,7 @@ def ask_details(advanced):
 		print " Network Nodes     | %s " % ", ".join(NETWORK_HOSTS)
 		print " Compute Nodes     | %s " % ", ".join(COMPUTE_HOSTS)
 		print " NTP Servers       | %s " % ", ".join(NTP_SERVERS)
-		if len(COMPUTE_HOSTS) > 1:
+		if TUNNELING:
 			print " Private Interface | %s " % TUNNEL_IF
 		print " Password          | %s \n" % PASSWD
 
