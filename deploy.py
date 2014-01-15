@@ -7,6 +7,7 @@ import getpass
 import time
 import datetime
 import string
+import subprocess
 
 VERSION = "1.0"
 TUNNEL_TYPE = "gre"
@@ -37,7 +38,7 @@ def usage():
 
 def check_root():
 	if not os.geteuid() == 0:
-		print "FATAL: Root privileges are required."
+		print "FATAL: Root privileges are required. Please do not use sudo."
 		sys.exit(1)
 
 def ask_question(question, hidden):
@@ -78,20 +79,30 @@ def gen_packstack():
 		infile.close()
 		outfile.close()
 
-		print "\nINFO: Successfully wrote answer file: %s" % outname
+		print "\nINFO: Successfully wrote answer file: %s\n" % outname
 		return outname
 
 	else:
 		print "FATAL: No packstack answer file found! Please re-clone repository!"
 		sys.exit(2)
 
+def yesno_question(question):
+	is_valid = None
+	while is_valid == None:
+		answer = ask_question(question, False)
+		if answer.upper() == "Y" or answer.upper() == "YES":
+				return True
+		elif answer.upper() == "N" or answer.upper() == "NO":
+				return False
+		else: is_valid = None
+
 def ask_details(advanced):
 	happy = False
 	allinone = False
 	while not happy:
 		if not advanced:
-			answer = ask_question("All-in-One Setup? [Y/N]: ", False)
-			if answer.upper() == "Y" or answer.upper() == "YES":
+			aio_question = yesno_question("All-in-One Setup? [Y/N]: ")
+			if aio_question:
 				global TUNNELING
 				TUNNELING = False
 				allinone = True
@@ -146,8 +157,13 @@ def ask_details(advanced):
 
 		PASSWD = ask_question("Choose a password: ", False)
 
+		if advanced: deployment_type = "Multi-Node w/ High Availability"
+		elif allinone: deployment_type = "Basic All-in-One"
+		else: deployment_type = "Single-Node w/ No High Availability"
+
 		print "\n Field             | Value                               "
 		print "-------------------+------------------------------------"
+		print " Deployment Type   | %s " % deployment_type
 		print " Controller Nodes  | %s " % ", ".join(CONTROLLER_HOSTS)
 		print " Network Nodes     | %s " % ", ".join(NETWORK_HOSTS)
 		print " Compute Nodes     | %s " % ", ".join(COMPUTE_HOSTS)
@@ -156,19 +172,30 @@ def ask_details(advanced):
 			print " Private Interface | %s " % TUNNEL_IF
 		print " Password          | %s \n" % PASSWD
 
-		answer = ask_question("Is this correct? [Y/N]: ", False)
-		if answer.upper() == "Y" or answer.upper() == "YES":
-			happy = True
-		elif answer.upper() == "N" or answer.upper() == "NO":
+		correct = yesno_question("Is this correct? [Y/N]: ")
+		if correct:	happy = True
+		else:
 			del CONTROLLER_HOSTS[:]
 			del NETWORK_HOSTS[:]
 			del COMPUTE_HOSTS[:]
 			del NTP_SERVERS[:]
+			allinone = False
 			happy = False
 			print "\n"
-		else:
-			print "INFO: Exiting deployment tool."
-			sys.exit(0)
+
+def install_packstack():
+	try:
+		subprocess.check_call(['yum', 'install', '-y', 'openstack-packstack'], stdout=devnull, stderr=devnull)
+	except:
+		return False
+	return True
+
+def run_packstack(filename):
+	try:
+		subprocess.check_call(['packstack','--answer-file',filename])
+	except:
+		return False
+	return True
 
 def run_prereq():
 	check_root()
@@ -181,7 +208,15 @@ def deploy_basic():
 	print "INFO: Deploying BASIC configuration...\n"
 	ask_details(False)
 	filename = gen_packstack()
+	if yesno_question("Execute? [Y/N]: "):
+		if not install_packstack():
+			print "FATAL: Couldn't install Packstack!"
+			sys.exit(1)
 
+	print "Running Packstack using: %s" % filename
+	if not run_packstack():
+		print "ERROR: Packstack failed, please check the log output!"
+	print "SUCCESS: Packstack successfully installed!"
 	sys.exit(0)
 
 def deploy_advanced():
@@ -191,6 +226,8 @@ def deploy_advanced():
 	sys.exit(0)
 
 if __name__ == "__main__":
+	devnull = open('/dev/null', 'w')
+
 	try:
 		options, other = getopt.getopt(sys.argv[1:], 'hcbap;', ['help','check','basic','advanced','post',])
 
