@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# Tiger Team OpenStack Deployment Script
+# Rhys Oxenham <roxenham@redhat.com>
 
 import sys
 import os
@@ -10,14 +12,13 @@ import string
 import subprocess
 
 VERSION = "1.0"
-TUNNEL_TYPE = "gre"
-
 COMPUTE_HOSTS = []
 CONTROLLER_HOSTS = []
 NETWORK_HOSTS = []
 NTP_SERVERS = []
 OVS_TYPE = "local"
 TUNNEL_IF = "eth1"
+TUNNEL_TYPE = "gre"
 PASSWD = "redhat"
 TUNNELING = True
 
@@ -30,6 +31,7 @@ def usage():
 	print "\t-b, --basic\t\tDeploys basic/single-controller OpenStack environment"
 	print "\t-a, --advanced\t\tDeploys highly-available multi-node OpenStack environment"
 	print "\t-p, --post\t\tRun post-install configuration script"
+	print "\t-r, --retry\t\tRetries the previous operation after failure"
 	print "\n\tExamples: " + sys.argv[0],
 	print " --check"
 	print "\t\t  " + sys.argv[0],
@@ -38,8 +40,28 @@ def usage():
 
 def check_root():
 	if not os.geteuid() == 0:
-		print "FATAL: Root privileges are required. Please do not use sudo."
+		print "FATAL: Root privileges are required."
 		sys.exit(1)
+
+def retry():
+	print "INFO: Retrying previous operation...\n"
+	try:
+		outfile = open("/tmp/.deploy_retry")
+		line = outfile.readline()
+		values = line.split(',')
+		deployment_type = values[0]
+		filename = values[1]
+	except:
+		print "FATAL: No retry file to run! Please use --usage for help."
+		sys.exit(1)
+
+	if deployment_type == "packstack":
+		if run_packstack(filename):
+			print "\nSUCCESS: Packstack completed successfully."
+			sys.exit(0)
+		else:
+			print "ERROR: Packstack could not be executed."
+			sys.exit(1)
 
 def ask_question(question, hidden):
         answer = None
@@ -69,8 +91,8 @@ def gen_packstack():
 						'changeme_compute':COMPUTE_LIST, \
 						'changeme_ntp':NTP_LIST, \
 						'changeme_passwd':PASSWD, \
-						'local':OVS_TYPE, \
-						'eth1':TUNNEL_IF}
+						'changeme_tenant_type':OVS_TYPE, \
+						'changeme_tunnel_if':TUNNEL_IF}
 
 		for line in infile:
 			for source, target in replaceables.iteritems():
@@ -94,6 +116,13 @@ def yesno_question(question):
 				return True
 		elif answer.upper() == "N" or answer.upper() == "NO":
 				return False
+		else: is_valid = None
+
+def multiple_choice_question(question, possibilities):
+	is_valid = None
+	while is_valid == None:
+		answer = ask_question(question, False)
+		if answer.lower() in possibilities:	return answer
 		else: is_valid = None
 
 def ask_details(advanced):
@@ -153,7 +182,7 @@ def ask_details(advanced):
 		if TUNNELING:
 			global TUNNEL_IF, OVS_TYPE
 			TUNNEL_IF = ask_question("Enter interface used for tunnel traffic: ", False)
-			OVS_TYPE = TUNNEL_TYPE
+			OVS_TYPE = multiple_choice_question("Enter tunnel type [GRE/VXLAN]: ", ["gre", "vxlan"])
 
 		global PASSWD
 		PASSWD = ask_question("Choose a password: ", False)
@@ -170,6 +199,7 @@ def ask_details(advanced):
 		print " Compute Nodes     | %s " % ", ".join(COMPUTE_HOSTS)
 		print " NTP Servers       | %s " % ", ".join(NTP_SERVERS)
 		if TUNNELING:
+			print " Tunnel Type       | %s " % OVS_TYPE.upper()
 			print " Private Interface | %s " % TUNNEL_IF
 		print " Password          | %s \n" % PASSWD
 
@@ -184,14 +214,15 @@ def ask_details(advanced):
 			happy = False
 			print "\n"
 
-def install_packstack():
-	try:
-		subprocess.check_call(['yum', 'install', '-y', 'openstack-packstack'], stdout=devnull, stderr=devnull)
-	except:
-		return False
-	return True
-
 def run_packstack(filename):
+	try:
+		subprocess.check_call(['which', 'packstack'], stdout=devnull, stderr=devnull)
+	except:
+		try:
+			subprocess.check_call(['yum', 'install', '-y', 'openstack-packstack'], stdout=devnull, stderr=devnull)
+		except:
+			print "FATAL: Couldn't install Packstack!"
+			sys.exit(1)
 	try:
 		subprocess.check_call(['packstack','--answer-file',filename])
 	except:
@@ -210,9 +241,12 @@ def deploy_basic():
 	ask_details(False)
 	filename = gen_packstack()
 	if yesno_question("Execute? [Y/N]: "):
-		if not install_packstack():
-			print "FATAL: Couldn't install Packstack!"
-			sys.exit(1)
+		try:
+			outname = "/tmp/.deploy_retry"
+			outfile = open(outname, 'w')
+			outfile.write("packstack," + filename)
+			outfile.close()
+		except: print "\nWARNING: Couldn't write retry file!\n"
 	else:
 		print "INFO: Deployment tool exiting."
 		sys.exit(0)
@@ -234,7 +268,7 @@ if __name__ == "__main__":
 	devnull = open('/dev/null', 'w')
 
 	try:
-		options, other = getopt.getopt(sys.argv[1:], 'hcbap;', ['help','check','basic','advanced','post',])
+		options, other = getopt.getopt(sys.argv[1:], 'hcbapr;', ['help','check','basic','advanced','post','retry',])
 
 	except:
 		print "FATAL: Unknown options specified. Use --help for usage information."
@@ -246,6 +280,7 @@ if __name__ == "__main__":
 		if opt in ('-b', '--basic'): deploy_basic()
 		if opt in ('-a', '--advanced'): deploy_advanced()
 		if opt in ('-p', '--post'): run_post()
+		if opt in ('-r', '--retry'): retry()
 
 	print "FATAL: No options specified. Use --help for usage"
 	sys.exit(2)
