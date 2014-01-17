@@ -217,7 +217,7 @@ def deploy_basic():
 		print "INFO: Deployment tool exiting."
 		sys.exit(0)
 
-	print "Running Packstack using: %s" % filename
+	print "\nRunning Packstack using: %s" % filename
 	if not run_packstack(filename):
 		print "ERROR: Packstack failed, please check the log output!"
 		sys.exit(1)
