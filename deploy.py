@@ -122,7 +122,7 @@ def multiple_choice_question(question, possibilities):
 	is_valid = None
 	while is_valid == None:
 		answer = ask_question(question, False)
-		if answer.lower() in possibilities:	return answer
+		if answer.lower() in possibilities:	return answer.lower()
 		else: is_valid = None
 
 def ask_details(advanced):
