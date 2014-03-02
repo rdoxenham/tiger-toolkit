@@ -165,7 +165,7 @@ def ask_details(advanced):
 			else:
 				if len(values) > 0: NETWORK_HOSTS.append(values[0])
 
-			compute = ask_question("Enter Compute Host IP(s): ", False)
+			compute = ask_question("Enter Compute Host IP(s) - Comma Separated: ", False)
 			compute = compute.strip()
 			values = compute.split(',')
 			for value in values:
