@@ -4,11 +4,8 @@
 
 import sys
 import os
-import getopt
 import getpass
-import time
 import datetime
-import string
 import subprocess
 
 VERSION = "1.0"
@@ -21,23 +18,6 @@ TUNNEL_IF = "eth1"
 TUNNEL_TYPE = "gre"
 PASSWD = "redhat"
 TUNNELING = True
-
-
-def usage():
-    print "OpenStack Tiger Deployment Tool: Version %s" % VERSION
-    print "Usage: " + sys.argv[0],
-    print "<option> [argument]\n"
-    print "\t-h, --help\t\tPrints this usage/help menu"
-    print "\t-c, --check\t\tRun a pre-install system check"
-    print "\t-b, --basic\t\tDeploys basic/single-controller OpenStack environment"
-    print "\t-a, --advanced\t\tDeploys highly-available multi-node OpenStack environment"
-    print "\t-p, --post\t\tRun post-install configuration script"
-    print "\t-r, --retry\t\tRetries the previous operation after failure"
-    print "\n\tExamples: " + sys.argv[0],
-    print " --check"
-    print "\t\t  " + sys.argv[0],
-    print " --basic"
-    sys.exit(0)
 
 
 def check_root():
@@ -70,10 +50,10 @@ def retry():
 def ask_question(question, hidden):
     answer = None
     if not hidden:
-        while answer == "" or answer == None:
+        while answer == "" or answer is None:
             answer = raw_input(question)
     else:
-        while answer == None:
+        while answer is None:
             answer = getpass.getpass(question)
     return answer
 
@@ -117,7 +97,7 @@ def gen_packstack():
 
 def yesno_question(question):
     is_valid = None
-    while is_valid == None:
+    while is_valid is None:
         answer = ask_question(question, False)
         if answer.upper() == "Y" or answer.upper() == "YES":
             return True
@@ -129,7 +109,7 @@ def yesno_question(question):
 
 def multiple_choice_question(question, possibilities):
     is_valid = None
-    while is_valid == None:
+    while is_valid is None:
         answer = ask_question(question, False)
         if answer.lower() in possibilities:
             return answer.lower()
@@ -294,30 +274,71 @@ def deploy_advanced():
     ask_details(True)
     sys.exit(0)
 
+
+def run_post():
+    raise NotImplementedError
+
+
 if __name__ == "__main__":
+    from optparse import OptionParser
+
     devnull = open('/dev/null', 'w')
 
-    try:
-        options, other = getopt.getopt(sys.argv[1:], 'hcbapr;', [
-                                       'help', 'check', 'basic', 'advanced', 'post', 'retry', ])
+    parser = OptionParser(description="OpenStack Tiger Deployment Tool %s" % VERSION,
+                          prog="deploy.py",
+                          version="Openstack Tiger Deployment Tool: Version %s" % VERSION,
+                          usage="%deploy.py [options]")
 
-    except:
-        print "FATAL: Unknown options specified. Use --help for usage information."
+    parser.add_option("--check", "-c",
+                      action="store_true",
+                      dest="run_prereq",
+                      default=False,
+                      help="Run a pre-install system check")
+
+    parser.add_option("--basic", "-b",
+                      action="store_true",
+                      dest="deploy_basic",
+                      default=False,
+                      help="Deploys basic/single-controller OpenStack environment")
+
+    parser.add_option("--advanced", "-a",
+                      action="store_true",
+                      dest="deploy_advanced",
+                      default=False,
+                      help="Deploys higly-available multi-node OpenStack environment")
+
+    parser.add_option("--post", "-p",
+                      action="store_true",
+                      dest="run_post",
+                      default=False,
+                      help="Run post-install configuration script")
+
+    parser.add_option("--retry", "-r",
+                      action="store_true",
+                      dest="retry",
+                      default=False,
+                      help="Retries the previous operation after failure")
+
+    (options, args) = parser.parse_args()
+    if len(args) > 1:
+        parser.error("Just one option is allowed")
         sys.exit(1)
 
-    for opt, arg in options:
-        if opt in ('-h', '--help'):
-            usage()
-        if opt in ('-c', '--check'):
-            run_prereq()
-        if opt in ('-b', '--basic'):
-            deploy_basic()
-        if opt in ('-a', '--advanced'):
-            deploy_advanced()
-        if opt in ('-p', '--post'):
-            run_post()
-        if opt in ('-r', '--retry'):
-            retry()
+    if len(args) == 0:
+        parser.print_help()
+        sys.exit(1)
 
-    print "FATAL: No options specified. Use --help for usage"
-    sys.exit(2)
+    if options.run_prereq:
+        run_prereq()
+
+    if options.deploy_basic:
+        deploy_basic()
+
+    if options.deploy_advanced:
+        deploy_advanced()
+
+    if options.run_post:
+        run_post()
+
+    if options.retry:
+        retry()
