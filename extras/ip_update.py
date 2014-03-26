@@ -6,6 +6,7 @@ import subprocess
 import sys
 import MySQLdb
 import urlparse
+import getpass
 
 
 def ask_question(question, hidden):
