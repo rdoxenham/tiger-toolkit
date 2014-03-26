@@ -70,10 +70,10 @@ def retry():
 def ask_question(question, hidden):
     answer = None
     if not hidden:
-        while answer == "" or answer == None:
+        while answer == "" or answer is None:
             answer = raw_input(question)
     else:
-        while answer == None:
+        while answer is None:
             answer = getpass.getpass(question)
     return answer
 
@@ -117,7 +117,7 @@ def gen_packstack():
 
 def yesno_question(question):
     is_valid = None
-    while is_valid == None:
+    while is_valid is None:
         answer = ask_question(question, False)
         if answer.upper() == "Y" or answer.upper() == "YES":
             return True
@@ -129,7 +129,7 @@ def yesno_question(question):
 
 def multiple_choice_question(question, possibilities):
     is_valid = None
-    while is_valid == None:
+    while is_valid is None:
         answer = ask_question(question, False)
         if answer.lower() in possibilities:
             return answer.lower()
@@ -293,6 +293,11 @@ def deploy_advanced():
     print "INFO: Deploying ADVANCED configuration...\n"
     ask_details(True)
     sys.exit(0)
+
+
+def run_post():
+    raise NotImplementedError
+
 
 if __name__ == "__main__":
     devnull = open('/dev/null', 'w')
