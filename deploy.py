@@ -280,65 +280,62 @@ def run_post():
 
 
 if __name__ == "__main__":
-    from optparse import OptionParser
+    import argparse
 
     devnull = open('/dev/null', 'w')
 
-    parser = OptionParser(description="OpenStack Tiger Deployment Tool %s" % VERSION,
-                          prog="deploy.py",
-                          version="Openstack Tiger Deployment Tool: Version %s" % VERSION,
-                          usage="%deploy.py [options]")
+    parser = argparse.ArgumentParser(description="OpenStack Tiger Deployment Tool %s" % VERSION)
 
-    parser.add_option("--check", "-c",
+    parser.add_argument("--check", "-c",
                       action="store_true",
                       dest="run_prereq",
                       default=False,
                       help="Run a pre-install system check")
 
-    parser.add_option("--basic", "-b",
+    parser.add_argument("--basic", "-b",
                       action="store_true",
                       dest="deploy_basic",
                       default=False,
                       help="Deploys basic/single-controller OpenStack environment")
 
-    parser.add_option("--advanced", "-a",
+    parser.add_argument("--advanced", "-a",
                       action="store_true",
                       dest="deploy_advanced",
                       default=False,
                       help="Deploys higly-available multi-node OpenStack environment")
 
-    parser.add_option("--post", "-p",
+    parser.add_argument("--post", "-p",
                       action="store_true",
                       dest="run_post",
                       default=False,
                       help="Run post-install configuration script")
 
-    parser.add_option("--retry", "-r",
+    parser.add_argument("--retry", "-r",
                       action="store_true",
                       dest="retry",
                       default=False,
                       help="Retries the previous operation after failure")
 
-    (options, args) = parser.parse_args()
-    if len(args) > 1:
-        parser.error("Just one option is allowed")
-        sys.exit(1)
-
-    if len(args) == 0:
+    args = parser.parse_args()
+    if (args.run_prereq == False and
+       args.deploy_basic == False and
+       args.deploy_advanced == False and
+       args.run_post == False and
+       args.retry == False):
         parser.print_help()
         sys.exit(1)
 
-    if options.run_prereq:
+    if args.run_prereq:
         run_prereq()
 
-    if options.deploy_basic:
+    if args.deploy_basic:
         deploy_basic()
 
-    if options.deploy_advanced:
+    if args.deploy_advanced:
         deploy_advanced()
 
-    if options.run_post:
+    if args.run_post:
         run_post()
 
-    if options.retry:
+    if args.retry:
         retry()
